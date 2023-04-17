@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -11,10 +13,13 @@
 #include <utility>
 #include <vector>
 
+
 #include "/home/tosic-killer/Dev/Fun-Code-Tests/hashmap-lookup/include/progresscpp/ProgressBar.hpp"
 
+std::string generate_random_hex_string(size_t length);
 
-std::pair<std::unordered_map<std::string, std::string>, std::unordered_map<std::string, std::string>> read_data(const std::string& filename);
+
+std::pair<std::unordered_map<std::string, std::string>, std::unordered_map<std::string, std::string>> read_data(const std::string& filename, size_t count);
 std::vector<std::string> pick_random_values(const std::unordered_map<std::string, std::string>& data, size_t count);
 
 std::optional<std::string> find_key_by_value(const std::unordered_map<std::string, std::string>& value_to_key, const std::string& value_to_find);
@@ -33,59 +38,110 @@ void run_binary_search_tests(const std::vector<std::pair<std::string, std::strin
 void run_hash_table_search_tests(const std::unordered_map<std::string, std::string>& value_to_key, const std::vector<std::string>& test_values, std::ofstream& log_file);
 void run_ternary_search_tests(const std::vector<std::pair<std::string, std::string>>& sorted_data, const std::vector<std::string>& test_values, std::ofstream& log_file);
 void run_exponential_search_tests(const std::vector<std::pair<std::string, std::string>>& sorted_data, const std::vector<std::string>& test_values, std::ofstream& log_file);
+void generate_data(size_t count, std::string filename);
 
 int main() {
     std::string filename = "signatures.db";
-    auto [hexData, value_to_key] = read_data(filename);
+
+    srand(time(0));
+    
+    // Generate a random integer between 1 and 100
+    int min_value = 9999;
+    int max_value = 567894;
+    int random_int = rand() % (max_value - min_value + 1) + min_value;
+
+    size_t count = random_int;
+
+    generate_data(count, filename);
+
+
+    auto [hexData, value_to_key] = read_data(filename, count);
 
     // Create a sorted vector of key-value pairs for binary search
     std::vector<std::pair<std::string, std::string>> sorted_data(value_to_key.begin(), value_to_key.end());
-std::sort(sorted_data.begin(), sorted_data.end(), [](const auto& a, const auto& b) {
-return a.second < b.second;
-});
-// Prepare a list of hex values to test
-std::vector<std::string> test_values = pick_random_values(hexData, 100);
+    std::sort(sorted_data.begin(), sorted_data.end(), [](const auto& a, const auto& b) {
+    return a.second < b.second;
+    });
+    // Prepare a list of hex values to test
+    std::vector<std::string> test_values = pick_random_values(hexData, 100);
 
-// Add some hex values that are not in the data
-test_values.push_back("255044462d312e340a332030206f626a203c3c0a2f4c656e677468203139");
-test_values.push_back("feedface00000012000000000000000200000016000009b00000009500000001000000385f5f504147455a45524f0000");
-test_values.push_back("93c20c003c5f000080420cec81820000");
-test_values.push_back("7c9d23787cbe2b78480001b13c5f0000");
-test_values.push_back("9421ffa0429f00057fe802a67c7c1b78");
+    // Open the log file for writing or appending
+    std::ofstream log_file("output.log", std::ios_base::app);
 
-// Open the log file for writing or appending
-std::ofstream log_file("output.log", std::ios_base::app);
+    // Write a header to the log file
+    log_file << "==============================" << std::endl;
+    log_file << "Results of test run on " << __DATE__ << " at " << __TIME__ << std::endl;
+    log_file << "==============================" << std::endl << std::endl;
 
-// Write a header to the log file
-log_file << "==============================" << std::endl;
-log_file << "Results of test run on " << __DATE__ << " at " << __TIME__ << std::endl;
-log_file << "==============================" << std::endl << std::endl;
+    // Run linear search tests and append output to the log file
+    run_linear_search_tests(value_to_key, test_values, log_file);
+    // Run binary search tests and append output to the log file
+    run_binary_search_tests(sorted_data, test_values, log_file);
+    // Run hash table search tests and append output to the log file
+    run_hash_table_search_tests(value_to_key, test_values, log_file);
+    // Run ternary search tests and append output to the log file
+    run_ternary_search_tests(sorted_data, test_values, log_file);
+    // Run exponential search tests and append output to the log file
+    run_exponential_search_tests(sorted_data, test_values, log_file);
 
-// Run linear search tests and append output to the log file
-run_linear_search_tests(value_to_key, test_values, log_file);
-// Run binary search tests and append output to the log file
-run_binary_search_tests(sorted_data, test_values, log_file);
-// Run hash table search tests and append output to the log file
-run_hash_table_search_tests(value_to_key, test_values, log_file);
-// Run ternary search tests and append output to the log file
-run_ternary_search_tests(sorted_data, test_values, log_file);
-// Run exponential search tests and append output to the log file
-run_exponential_search_tests(sorted_data, test_values, log_file);
+    // Close the log file
+    log_file.close();
 
-// Close the log file
-log_file.close();
-
-return 0;
+    return 0;
 }
 
-std::pair<std::unordered_map<std::string, std::string>, std::unordered_map<std::string, std::string>> read_data(const std::string& filename) {
+void generate_data(size_t count, std::string filename) {
+    std::ofstream outfile(filename);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> dist_hex_length(10, 200);
+    
+    std::cout << "Generating data..." << std::endl;
+
+    if (outfile.is_open()) {
+        progresscpp::ProgressBar progressBar(count, 70); // Initialize the progress bar with the given count of steps and width of 70
+
+        for (size_t i = 1; i <= count; ++i) {
+            std::string key = "TestRandom." + std::to_string(i);
+            std::string value = generate_random_hex_string(dist_hex_length(gen));
+            outfile << key << "=" << value << "\n";
+
+            ++progressBar; // update progress bar
+            progressBar.display(); // display progress bar
+        }
+
+        progressBar.done(); // Finish the progress bar
+
+        outfile.close();
+        std::cout << "Data generated successfully" << std::endl;
+    } else {
+        std::cerr << "Unable to open file: signatures.db" << std::endl;
+    }
+}
+
+std::string generate_random_hex_string(size_t length) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint16_t> dist_hex(0, 65535);
+
+    std::stringstream ss;
+    ss.str().reserve(length);
+
+    for (size_t i = 0; i < length; i += 4) {
+        uint16_t val = dist_hex(gen);
+        ss << std::hex << std::setw(4) << std::setfill('0') << val;
+    }
+
+    return ss.str().substr(0, length);
+}
+
+std::pair<std::unordered_map<std::string, std::string>, std::unordered_map<std::string, std::string>> read_data(const std::string& filename, size_t count) {
     std::unordered_map<std::string, std::string> hexData;
     std::unordered_map<std::string, std::string> value_to_key;
 
     std::ifstream file(filename);
     std::string line;
     std::cout << "Reading data from " << filename << std::endl;
-    int count = 10000;
     progresscpp::ProgressBar bar(count, 70, '#', '-');
     while (std::getline(file, line)) {
         size_t delimiter = line.find('=');
