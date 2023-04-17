@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <atomic>
-
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
@@ -18,7 +17,7 @@
 #include <thread>
 #include <mutex>
 
-#include "/home/tosic-killer/Dev/Fun-Code-Tests/hashmap-lookup/include/progresscpp/ProgressBar.hpp"
+#include "./include/progresscpp/ProgressBar.hpp"
 
 std::string generate_random_hex_string(size_t length);
 
@@ -47,6 +46,7 @@ void run_binary_search_tests(const std::vector<std::pair<std::string, std::strin
 void run_hash_table_search_tests(const std::unordered_map<std::string, std::string>& value_to_key, const std::vector<std::string>& test_values, std::ofstream& log_file);
 void run_ternary_search_tests(const std::vector<std::pair<std::string, std::string>>& sorted_data, const std::vector<std::string>& test_values, std::ofstream& log_file);
 void run_exponential_search_tests(const std::vector<std::pair<std::string, std::string>>& sorted_data, const std::vector<std::string>& test_values, std::ofstream& log_file);
+void run_custom_search_tests(const std::unordered_map<std::string, std::string>& value_to_key, const std::vector<std::string>& test_values, std::ofstream& log_file);
 void generate_data(size_t count, std::string filename);
 
 int main() {
@@ -55,8 +55,8 @@ int main() {
     srand(time(0));
     
     // Generate a random integer between 1 and 100
-    int min_value = 10000;
-    int max_value = 5678942;
+    int min_value = 1000000;
+    int max_value = 56789423;
     int random_int = rand() % (max_value - min_value + 1) + min_value;
 
     size_t count = random_int;
@@ -71,16 +71,18 @@ int main() {
     std::sort(sorted_data.begin(), sorted_data.end(), [](const auto& a, const auto& b) {
     return a.second < b.second;
     });
+    int num_searches = 1000;
     // Prepare a list of hex values to test
-    std::vector<std::string> test_values = pick_random_values(hexData, 1000);
+    std::cout << "Preparing " << num_searches << " random values to search for..." << std::endl;
+    std::vector<std::string> test_values = pick_random_values(hexData, num_searches);
 
     // Open the log file for writing or appending
     std::ofstream log_file("output.log", std::ios_base::app);
 
     // Write a header to the log file
-    log_file << "==============================" << std::endl;
-    log_file << "Results of test run on " << __DATE__ << " at " << __TIME__ << std::endl;
-    log_file << "==============================" << std::endl << std::endl;
+    log_file << "=============================================================================================================" << std::endl;
+    log_file << "Results of test run on " << __DATE__ << " at " << __TIME__ << " Dataset size: " << count << " Number of values to find: " << num_searches << std::endl;
+    log_file << "=============================================================================================================" << std::endl << std::endl;
 
     // Run linear search tests and append output to the log file
     run_linear_search_tests(value_to_key, test_values, log_file);
@@ -199,9 +201,13 @@ std::vector<std::string> pick_random_values(const std::unordered_map<std::string
     std::vector<std::string> values;
 
     std::sample(data.begin(), data.end(), std::back_inserter(temp_values), count, std::mt19937{std::random_device{}()});
+    progresscpp::ProgressBar bar(count, 70, '#', '-');
     for (const auto& pair : temp_values) {
         values.push_back(pair.second);
+        ++bar;
+        bar.display();
     }
+    bar.done();
 
     return values;
 }
@@ -256,10 +262,11 @@ void run_tests(const std::string& test_name, Func func, const Container& data, c
     bar.done();
     double avg_time = total_time / static_cast<double>(test_values.size());
 
-    log_file << test_name << " Test Results: " << std::endl;
-    log_file << "  Best Time: " << best_time << " ms" << std::endl;
-    log_file << "  Average Time: " << avg_time << " ms" << std::endl;
-    log_file << "  Worst Time: " << worst_time << " ms" << std::endl;
+    log_file << test_name << " Results: " << std::endl;
+    log_file << "  Best Time: " << best_time << " s" << std::endl;
+    log_file << "  Average Time: " << avg_time << " s" << std::endl;
+    log_file << "  Worst Time: " << worst_time << " s" << std::endl;
+    log_file << "  Total Time: " << total_time << " s" << std::endl;
     log_file << std::endl;
 }
 
