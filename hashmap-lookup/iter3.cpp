@@ -1,7 +1,10 @@
 #include <algorithm>
+#include <atomic>
+
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
+#include <condition_variable>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -12,11 +15,16 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
+#include <thread>
+#include <mutex>
 
 #include "/home/tosic-killer/Dev/Fun-Code-Tests/hashmap-lookup/include/progresscpp/ProgressBar.hpp"
 
 std::string generate_random_hex_string(size_t length);
+
+std::mutex mtx;
+std::condition_variable cv;
+std::atomic<size_t> counter{0};
 
 
 std::pair<std::unordered_map<std::string, std::string>, std::unordered_map<std::string, std::string>> read_data(const std::string& filename, size_t count);
